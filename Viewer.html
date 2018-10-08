@@ -1,0 +1,75 @@
+<html>
+
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+        crossorigin="anonymous">
+
+</head>
+
+<body>
+    <div class="container">
+        <!-- Container principal para imagem -->
+        <div class="imageContent">
+            <div class="row">
+                <span style="margin-left:auto;margin-right:auto">
+                    <button class="btn btn-light" onclick='img.zoom(this,"in")'>+</button>
+                    <button class="btn btn-light" onclick='img.zoom(this,"out")'>-</button>
+                    <button class="btn btn-light" onclick='img.rotate(this,"left")'>Rotate Left</button>
+                    <button class="btn btn-light" onclick='img.rotate(this,"right")'>Rotate Right</button>
+                </span>
+            </div>
+            <div  class="row" style="background-color: lightgray;border:solid red; overflow:auto">
+                <!-- Alinhar imagem no centro -->
+                <div class='image' style="margin-left:auto;margin-right:auto;background-color: gray;">
+                    <img src="Teste.jpg" alt="">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var img = {
+            init: function (el) {
+                $(el).attr('zoomPercent', '100').attr('rotate', '0');
+            },
+            zoom: function (t,i) {
+                var obj = $(t).closest('.imageContent').find('.image');
+                if (i == 'in') {
+                    $(obj).attr('zoomPercent', +$(obj).attr('zoomPercent') + +10);
+                } else if (i == 'out') {
+                    $(obj).attr('zoomPercent', +$(obj).attr('zoomPercent') - +10);
+                }
+                this.applyTransform(obj);
+            },
+            rotate: function (t,direction) {
+                var obj = $(t).closest('.imageContent').find('.image');
+                if (direction == 'left') {
+                    $(obj).attr('rotate', +$(obj).attr('rotate') - +90)
+                } else if (direction == 'right') {
+                    $(obj).attr('rotate', +$(obj).attr('rotate') + +90)
+                }
+                this.applyTransform(obj);
+            },
+            percentToScale: function (percent) {
+                return percent.toString()[0] + '.' + percent.toString()[1] + percent.toString()[2];
+            },
+            applyTransform: function (obj) {
+                var scale = this.percentToScale($(obj).attr('zoomPercent'));
+                $(obj).css('transform', 'matrix(' + scale + ',0,0,' + scale + ',0,0) rotate(' + $(obj).attr('rotate') + 'deg)');
+            },
+            getTransform: function(t){
+                $(t).closest('.imageContent').find('.image')
+            }
+        }
+        $(window).ready(function () {
+                    img.init('.imageContent .image');
+                    });
+    </script>
+</body>
+
+</html>
