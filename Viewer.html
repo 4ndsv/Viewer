@@ -3,12 +3,13 @@
 <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
-        crossorigin="anonymous"></script>
+            crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
-        crossorigin="anonymous"></script>
+            crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
-        crossorigin="anonymous">
-
+          crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="imgareaselect-default.css" />
+    <script type="text/javascript" src="jquery.imgareaselect.pack.js"></script>
 </head>
 
 <body>
@@ -21,12 +22,17 @@
                     <button class="btn btn-light" onclick='img.zoom(this,"out")'>-</button>
                     <button class="btn btn-light" onclick='img.rotate(this,"left")'>Rotate Left</button>
                     <button class="btn btn-light" onclick='img.rotate(this,"right")'>Rotate Right</button>
+                    <button class="btn btn-light" onclick='img.autoFocus(this)'>Focus</button>
+                    <button class="btn btn-light" onclick='img.areaFocus(this)'>Area</button>
                 </span>
             </div>
-            <div  class="row" style="background-color: lightgray;border:solid red; overflow:auto">
-                <!-- Alinhar imagem no centro -->
-                <div class='image' style="margin-left:auto;margin-right:auto;background-color: gray;">
-                    <img src="Teste.jpg" alt="">
+            <div class="row" id="divImgClone" style="overflow:auto;position:absolute; width:180px; height:80px;overflow:hidden;margin:0 auto;left:50%;margin-left:-90px; border-radius:4px;z-index:1;">
+                <div class="image imageClone">
+                </div>
+            </div>
+            <div class="row" style="background-color: lightgray;border:solid red; overflow:auto">
+                <div class='image imageDefault' style="margin-left:auto;margin-right:auto;background-color: gray;">
+                    <img src="TESTE.jpg" alt="" />
                 </div>
             </div>
         </div>
@@ -34,10 +40,13 @@
 
     <script>
         var img = {
+            eventEnable: false,
+            eventFinish: false,
             init: function (el) {
                 $(el).attr('zoomPercent', '100').attr('rotate', '0');
+                $('#divImgClone').css('margin-top', $('.imageDefault').height() - 82);
             },
-            zoom: function (t,i) {
+            zoom: function (t, i) {
                 var obj = $(t).closest('.imageContent').find('.image');
                 if (i == 'in') {
                     $(obj).attr('zoomPercent', +$(obj).attr('zoomPercent') + +10);
@@ -46,14 +55,64 @@
                 }
                 this.applyTransform(obj);
             },
-            rotate: function (t,direction) {
+            rotate: function (t, direction) {
                 var obj = $(t).closest('.imageContent').find('.image');
                 if (direction == 'left') {
-                    $(obj).attr('rotate', +$(obj).attr('rotate') - +90)
+                    $(obj).attr('rotate', +$(obj).attr('rotate') - +90);
                 } else if (direction == 'right') {
-                    $(obj).attr('rotate', +$(obj).attr('rotate') + +90)
+                    $(obj).attr('rotate', +$(obj).attr('rotate') + +90);
                 }
                 this.applyTransform(obj);
+            },
+            autoFocus: function (t) {
+                if (img.eventEnable) {
+                    img.removeAutoFocus(t);
+                    return;
+                }
+                var obj = $(t).closest('.imageContent').find('.imageDefault');
+                $(obj)
+                    .on('mouseover', function () {
+                        var objImg = $(t).closest('.imageContent').find('.imageDefault img').clone();
+                        $('.imageClone').append(objImg);
+                        img.eventFinish = true;
+                        $('.imageClone img').css({ 'transform': 'scale(2)' });
+                    })
+                    .on('mouseout', function () {
+                        $('#divImgClone img').remove();
+                    })
+                    .on('mousemove', function (e) {
+                        $('.imageClone img').css({ 'transform-origin': ((e.pageX - $(this).offset().left) / $(this).width()) * 170 + '% ' + ((e.pageY - $(this).offset().top) / $(this).height()) * 170 + '%' });
+                    });
+
+                $('body').click(function () {
+                    if (img.eventFinish)
+                        img.removeAutoFocus(t);
+                });
+                img.eventEnable = true;
+            },
+            areaFocus: function (t) {
+                if (img.eventEnable) {
+                    img.removeAreaFocus(t);
+                    return;
+                }
+                var obj = $(t).closest('.imageContent').find('.imageDefault img');
+
+                obj.imgAreaSelect({ onSelectEnd: img.calcAreaPreview, maxWidth: $('#divImgClone').width(), maxHeight: $('#divImgClone').height() });
+            },
+            removeAutoFocus: function (t) {
+                var obj = $(t).closest('.imageContent').find('.imageDefault');
+                $(obj).unbind('mouseover').unbind('mouseout').unbind('mousemove');
+
+                $('body').unbind('click');
+                img.eventEnable = false;
+                img.eventFinish = false;
+                $('.imageClone img').remove();
+            },
+            removeAreaFocus: function () {
+                $('body').unbind('click');
+                img.eventEnable = false;
+                img.eventFinish = false;
+                $('.imageClone img').remove();
             },
             percentToScale: function (percent) {
                 return percent.toString()[0] + '.' + percent.toString()[1] + percent.toString()[2];
@@ -62,13 +121,40 @@
                 var scale = this.percentToScale($(obj).attr('zoomPercent'));
                 $(obj).css('transform', 'matrix(' + scale + ',0,0,' + scale + ',0,0) rotate(' + $(obj).attr('rotate') + 'deg)');
             },
-            getTransform: function(t){
-                $(t).closest('.imageContent').find('.image')
+            getTransform: function (t) {
+                $(t).closest('.imageContent').find('.image');
+            },
+            calcAreaPreview: function (objImg, selection) {
+                var scaleX = $('.imageDefault').width / selection.width;
+                var scaleY = $('.imageDefault').height / selection.height;
+
+                var imgClone = $('.imageDefault img').clone();
+                $('.imageClone').append(imgClone);
+
+                var widthDivModal = $('#divImgClone').width();
+                var heightDivModal = $('#divImgClone').height();
+
+                $('.imageClone').css({
+                    width: Math.round(scaleX * widthDivModal) + 'px',
+                    height: Math.round(scaleY * heightDivModal) + 'px',
+                    marginLeft: '-' + Math.round((widthDivModal * selection.x1) / selection.width) + 'px',
+                    marginTop: '-' + Math.round((heightDivModal * selection.y1) / selection.height) + 'px'
+                });
+
+                $('.imageDefault img').imgAreaSelect({ remove: true });
+
+                img.eventFinish = false;
+                $('body').click(function () {
+                    if (img.eventFinish)
+                        img.removeAreaFocus();
+                });
+                img.eventEnable = true;
+                img.eventFinish = true;
             }
         }
         $(window).ready(function () {
-                    img.init('.imageContent .image');
-                    });
+            img.init('.imageContent .image');
+        });
     </script>
 </body>
 
