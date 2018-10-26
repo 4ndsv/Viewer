@@ -27,153 +27,218 @@
                 </span>
             </div>
             <div class="row" id="divImgClone" style="overflow:auto;position:absolute; width:180px; height:80px;overflow:hidden;margin:0 auto;left:50%;margin-left:-90px; border-radius:4px;z-index:1;">
-                <div class="image imageClone" style="background-color:rgba(255, 255, 255, 0.26)">
-                </div>
+                <canvas class="image imageClone"></canvas>
             </div>
-            <div class="row" style="background-color: lightgray;border:solid red; overflow:auto;">
-                <div class='image imageDefault' style="margin-left:auto;margin-right:auto;background-color: gray;">
-                    <img src="http://localhost/Capturar.PNG" alt="" />
-                </div>
+            <div class="row" style="background-color: lightgray;border:solid red;overflow:auto;">
+                <canvas class='image imageDefault' style="margin-left:auto;margin-right:auto;background-color: gray;"></canvas>
             </div>
         </div>
     </div>
 
     <script>
         var img = {
-            eventEnable: false,
-            eventFinish: false,
-            rotateValue: 0,
+            imageDefaultSrc: 'TESTE.jpg',
             init: function (el) {
-                $(el).attr('zoomPercent', '100').attr('rotate', '0');
-                $('#divImgClone').css('margin-top', $('.imageDefault').height() - 82);
-                $('.imageDefault').css('max-height', $('.imageDefault').height());
+                $(el).attr('scale', '1.0').attr('rotate', '0').attr('focusEnable', 'false');
+
+                img.loadImageCanvas(el, function (baseImg, ctx) {
+                    ctx.drawImage(baseImg, 0, 0);
+                    $('#divImgClone').css('margin-top', baseImg.height - 85);
+                    $('.imageDefault').parent().css('max-height', baseImg.height + 6);
+                });
             },
             zoom: function (t, i) {
-                var obj = $(t).closest('.imageContent').find('.imageDefault');
-                if (i == 'in') {
-                    $(obj).attr('zoomPercent', +$(obj).attr('zoomPercent') + +10);
-                } else if (i == 'out') {
-                    $(obj).attr('zoomPercent', +$(obj).attr('zoomPercent') - +10);
-                }
-                this.applyTransform(obj);
+                var canvas = $(t).closest('.imageContent').find('.imageDefault');
+                if (parseFloat(canvas.attr('scale')) === 1 && i === 'out')
+                    return;
+
+                canvas.attr('scale', parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1));
+
+                img.loadImageCanvas(canvas, function (baseImg, ctx) {
+                    ctx.scale(canvas.attr('scale'), canvas.attr('scale'));
+                    ctx.drawImage(baseImg, 0, 0);
+
+                    var removeSize = parseFloat(canvas.attr('scale')) === 1;
+                    canvas.css("width", removeSize ? "" : parseInt(baseImg.width * parseFloat(canvas.attr('scale'))));
+                    canvas.css("height", removeSize ? "" : parseInt(baseImg.height * parseFloat(canvas.attr('scale'))));
+                });
             },
             rotate: function (t, direction) {
-                if (direction == 'left') {
-                    img.rotateValue = -90;
-                } else if (direction == 'right') {
-                    img.rotateValue = 90;
-                }
-                var imageDefault = $(t).closest('.imageContent').find('.imageDefault img')[0];
-                var tnCanvas = document.createElement('canvas');
-                var tnCanvasContext = tnCanvas.getContext('2d');
+                var canvas = $(t).closest('.imageContent').find('.imageDefault');
 
-                tnCanvasContext.save();
-                tnCanvas.width = imageDefault.naturalHeight;
-                tnCanvas.height = imageDefault.naturalWidth;
-                tnCanvasContext.translate(direction == 'right' ? imageDefault.height : 0, direction == 'left' ? imageDefault.width : 0);
+                canvas.attr('scale', '1.0');
+                img.zoom(t, 'out');
 
-                tnCanvasContext.rotate(img.rotateValue * Math.PI / 180);
-                tnCanvasContext.drawImage(imageDefault, 0, 0, imageDefault.width, imageDefault.height);
-                var newUrl = tnCanvas.toDataURL();
-                tnCanvasContext.restore();
-                imageDefault.remove();
-                $(t).closest('.imageContent').find('.imageDefault')[0].innerHTML = '<img src="' + newUrl + '" />';
+                if (direction === 'right')
+                    canvas.attr('rotate', parseInt(canvas.attr('rotate')) + 90);
+                if (direction === 'left')
+                    canvas.attr('rotate', parseInt(canvas.attr('rotate')) + -90);
+
+                if (canvas.attr('rotate').includes('360'))
+                    canvas.attr('rotate', '0');
+
+                var imgVertical = canvas.attr('rotate').includes('90') || canvas.attr('rotate').includes('270');
+
+                img.loadImageCanvas(canvas, function (baseImg, ctx) {
+                    if (canvas.attr('rotate') === '90' || canvas.attr('rotate') === '-270')
+                        ctx.translate(baseImg.height, 0);
+                    else if (canvas.attr('rotate') === '-90' || canvas.attr('rotate') === '270')
+                        ctx.translate(0, baseImg.width);
+                    else if (canvas.attr('rotate').includes('180'))
+                        ctx.translate(baseImg.width, baseImg.height);
+
+                    ctx.rotate(parseInt(canvas.attr('rotate')) * Math.PI / 180);
+                    ctx.drawImage(baseImg, 0, 0);
+
+                    canvas.css("width", !imgVertical ? "" : baseImg.height);
+                    canvas.css("height", !imgVertical ? "" : baseImg.width);
+                }, imgVertical);
             },
             autoFocus: function (t) {
-                var obj = $(t).closest('.imageContent').find('.imageDefault');
-                obj.css('transform', 'matrix(1, 0, 0, 1, 0, 0)');
-                $(obj).attr('zoomPercent', '100').attr('rotate', '0');
+                var canvas = $(t).closest('.imageContent').find('.imageDefault');
 
-                if (img.eventEnable) {
+                if (canvas.attr('focusEnable') === 'true') {
                     img.removeAutoFocus(t);
                     return;
                 }
-                var imgObject = $('.imageDefault img')[0];
-                var divImgClone = $('#divImgClone')[0];
-                $(obj)
+                $(canvas)
                     .on('mouseout', function () {
                         $('.imageClone img').remove();
                     })
                     .on('mousemove', function (e) {
-                        debugger;
-                        var newUrl = img.getImagePortion(imgObject, divImgClone.offsetWidth / 2, divImgClone.offsetHeight / 2, e.pageX - $(this).offset().left - 45, e.pageY - $(this).offset().top - 20, 1);
-                        $('.imageClone')[0].innerHTML = '<img id="imgClone" style="transform-origin: 0% 0%;transform:matrix(2.0,0,0,2.0,0,0)" src="' + newUrl + '" />';
+                        img.getImagePortion(canvas, e.pageX - $(this).offset().left - 63, e.pageY - $(this).offset().top - 28);
                     });
 
                 $('body').click(function () {
-                    if (img.eventFinish)
+                    if (canvas.attr('focusEnable') === 'true')
                         img.removeAutoFocus(t);
                     else
-                        img.eventFinish = true;
+                        canvas.attr('focusEnable', 'true');
                 });
-                img.eventEnable = true;
+            },
+            removeAutoFocus: function (t) {
+                var canvas = $(t).closest('.imageContent').find('.imageDefault');
+                $(canvas).unbind('mouseover').unbind('mouseout').unbind('mousemove');
+
+                $('body').unbind('click');
+                canvas.attr('focusEnable', 'false');
+                var canvasClone = $('.imageClone')[0];
+                canvasClone.getContext('2d').clearRect(0, 0, canvasClone.width, canvasClone.height);
+            },
+            getImagePortion: function (canvas, startX, startY) {
+
+                var divCanvasClone = $('#divImgClone')[0];
+                var newWidth = divCanvasClone.offsetWidth * 0.7;
+                var newHeight = divCanvasClone.offsetHeight * 0.7;
+
+                var canvasClone = $('.imageClone')[0];
+                canvasClone.width = divCanvasClone.offsetWidth;
+                canvasClone.height = divCanvasClone.offsetHeight;
+                var ctx = canvasClone.getContext('2d');
+                ctx.drawImage(canvas[0], startX, startY, newWidth, newHeight, 0, 0, divCanvasClone.offsetWidth, divCanvasClone.offsetHeight);
             },
             areaFocus: function (t) {
                 var obj = $(t).closest('.imageContent').find('.imageDefault');
-                obj.css('transform', 'matrix(1, 0, 0, 1, 0, 0)');
-                $(obj).attr('zoomPercent', '100').attr('rotate', '0');
-
-                if (img.eventEnable) {
-                    img.removeAreaFocus(t);
+                var canvas = obj[0];
+                if (obj.attr('focusEnable') === 'true') {
+                    img.removeAutoFocus(t);
                     return;
                 }
 
-                var objImg = $(obj).find('img');
-                objImg.imgAreaSelect({ onSelectEnd: img.calcAreaPreview, maxWidth: $('#divImgClone').width() * 0.80, maxHeight: $('#divImgClone').height() * 0.80 });
-            },
-            removeAutoFocus: function (t) {
-                var obj = $(t).closest('.imageContent').find('.imageDefault');
-                $(obj).unbind('mouseover').unbind('mouseout').unbind('mousemove');
+                var drag = false;
+                var rect = {};
+                var newCanvas = document.createElement('canvas');
+                newCanvas.className = 'image canvasSelectDefault';
+                var newContext = newCanvas.getContext('2d');
 
-                $('body').unbind('click');
-                img.eventEnable = false;
-                img.eventFinish = false;
-                $('.imageClone img').remove();
-            },
-            removeAreaFocus: function () {
-                $('body').unbind('click');
-                img.eventEnable = false;
-                img.eventFinish = false;
-                $('.imageClone img').remove();
-            },
-            percentToScale: function (percent) {
-                return percent.toString()[0] + '.' + percent.toString()[1] + percent.toString()[2];
-            },
-            applyTransform: function (obj) {
-                var scale = this.percentToScale($(obj).attr('zoomPercent'));
-                $(obj).css('transform', 'matrix(' + scale + ',0,0,' + scale + ',0,0) rotate(' + $(obj).attr('rotate') + 'deg)');
-            },
-            getTransform: function (t) {
-                $(t).closest('.imageContent').find('.image');
-            },
-            getImagePortion: function (imgObj, newWidth, newHeight, startX, startY, ratio) {
-                var tnCanvas = document.createElement('canvas');
-                var tnCanvasContext = tnCanvas.getContext('2d');
+                $(obj).on('mousedown', function (e) {
 
-                var bufferCanvas = document.createElement('canvas');
-                var bufferContext = bufferCanvas.getContext('2d');
-                bufferCanvas.width = imgObj.naturalWidth;
-                bufferCanvas.height = imgObj.naturalHeight;
-                bufferContext.drawImage(imgObj, 0, 0);
+                    newCanvas.width = canvas.width;
+                    newCanvas.height = canvas.height;
+                    $(t).closest('.imageContent').find('.imageDefault').parent().append(newCanvas);
+                    $('.canvasSelectDefault').attr('style', $(t).closest('.imageContent').find('.imageDefault').attr('style'));
+                    $('.canvasSelectDefault').css('z-index', '9999');
+                    $('.canvasSelectDefault').css('width', newCanvas.width);
+                    $('.canvasSelectDefault').css('height', newCanvas.height);
+                    $('.canvasSelectDefault').css("background-color", "");
+                    var imgVertical = obj.attr('rotate').includes('90') || obj.attr('rotate').includes('270');
+                    $('.canvasSelectDefault').css('margin-left', ((parseFloat(obj.parent().css('width').replace('px', '')) / 2) + ($('.canvasSelectDefault').width() / 2) - (imgVertical ? 11.5 : 3)) * -1);
 
-                tnCanvasContext.drawImage(bufferCanvas, startX, startY, newWidth * ratio, newHeight * ratio, 0, 0, newWidth, newHeight);
-                return tnCanvas.toDataURL();
-            },
-            calcAreaPreview: function (objImg, selection) {
-                var newUrl = img.getImagePortion(objImg, selection.width, selection.height, selection.x1, selection.y1, 1);
+                    var scrollParent = getScrollParent();
+                    rect.startX = e.pageX + scrollParent.x - this.offsetLeft;
+                    rect.startY = e.pageY + scrollParent.y - this.offsetTop;
+                    drag = true;
 
-                $('.imageClone')[0].innerHTML = '<img id="imgClone" style="transform-origin: 0% 0%;transform:matrix(1.25,0,0,1.25,0,0)" src="' + newUrl + '" />';
+                    $('.canvasSelectDefault').on('mouseup', function () {
+                        $('.canvasSelectDefault').remove();
+                        obj.unbind('mousedown');
+                        drag = false;
 
-                $('.imageDefault img').imgAreaSelect({ remove: true });
-
-                img.eventFinish = false;
-                $('body').click(function () {
-                    if (img.eventFinish)
-                        img.removeAreaFocus();
-                    else
-                        img.eventFinish = true;
+                        var divCanvasClone = $('#divImgClone')[0];
+                        var canvasClone = $('.imageClone')[0];
+                        canvasClone.width = divCanvasClone.offsetWidth;
+                        canvasClone.height = divCanvasClone.offsetHeight;
+                        var ctxClone = canvasClone.getContext('2d');
+                        ctxClone.drawImage(canvas, rect.startX, rect.startY, rect.w, rect.h, 0, 0, divCanvasClone.offsetWidth, divCanvasClone.offsetHeight);
+                    });
+                    $('.canvasSelectDefault').on('mousemove', function (e) {
+                        if (drag) {
+                            newContext.clearRect(0, 0, newCanvas.width, newCanvas.height);
+                            var scrollParent = getScrollParent();
+                            rect.w = (e.pageX + scrollParent.x - this.offsetLeft) - rect.startX;
+                            rect.h = (e.pageY + scrollParent.y - this.offsetTop) - rect.startY;
+                            rect.w = rect.w > (180 * 0.7) ? 180 * 0.7 : rect.w;
+                            rect.h = rect.h > (80 * 0.7) ? 80 * 0.7 : rect.h;
+                            draw();
+                        }
+                    });
                 });
-                img.eventEnable = true;
+
+                function draw() {
+                    newContext.globalAlpha = 0.4;
+                    newContext.fillRect(rect.startX, rect.startY, rect.w, rect.h);
+                }
+
+                function getScrollParent() {
+                    var parent = $('.imageDefault').parent();
+                    var yParent = parent[0].scrollTop;
+                    var xParent = parent[0].scrollLeft;
+                    do {
+                        parent = parent.parent();
+                        if (parent[0] != undefined && parent[0].scrollTop != undefined) {
+                            yParent += parent[0].scrollTop;
+                            xParent += parent[0].scrollLeft;
+                        }
+
+                    } while (parent[0] != undefined && parent[0].scrollTop != undefined);
+                    return { x: xParent, y: yParent };
+                }
+
+                $('body').click(function () {
+                    if (obj.attr('focusEnable') === 'true')
+                        img.removeAutoFocus(t);
+                    else
+                        obj.attr('focusEnable', 'true');
+                });
+            },
+            removeAreaFocus: function (t) {
+                var canvas = $(t).closest('.imageContent').find('.imageDefault');
+
+                $('body').unbind('click');
+                canvas.attr('focusEnable', 'false');
+                var canvasClone = $('.imageClone')[0];
+                canvasClone.getContext('2d').clearRect(0, 0, canvasClone.width, canvasClone.height);
+            },
+            loadImageCanvas: function (objCanvas, delegate, rotate = false) {
+                var canvas = $(objCanvas)[0];
+                var ctx = canvas.getContext('2d');
+                var baseImg = new Image();
+                baseImg.onload = function () {
+                    canvas.width = (!rotate ? baseImg.width : baseImg.height) * parseFloat($(objCanvas).attr('scale'));
+                    canvas.height = (!rotate ? baseImg.height : baseImg.width) * parseFloat($(objCanvas).attr('scale'));
+                    delegate(baseImg, ctx);
+                };
+                baseImg.src = img.imageDefaultSrc;
             }
         }
         $(window).ready(function () {
