@@ -18,10 +18,10 @@
         <div class="imageContent">
             <div class="row">
                 <span style="margin-left:auto;margin-right:auto">
-                    <button class="btn btn-light" onclick='img.zoom(this,"in")'>+</button>
-                    <button class="btn btn-light" onclick='img.zoom(this,"out")'>-</button>
-                    <button class="btn btn-light" onclick='img.rotate(this,"left")'>Rotate Left</button>
-                    <button class="btn btn-light" onclick='img.rotate(this,"right")'>Rotate Right</button>
+                    <button class="btn btn-light" onclick='img.zoomRotate(this, "", "in")'>+</button>
+                    <button class="btn btn-light" onclick='img.zoomRotate(this, "", "out")'>-</button>
+                    <button class="btn btn-light" onclick='img.zoomRotate(this, "left", "")'>Rotate Left</button>
+                    <button class="btn btn-light" onclick='img.zoomRotate(this, "right", "")'>Rotate Right</button>
                     <button class="btn btn-light" onclick='img.autoFocus(this)'>Focus</button>
                     <button class="btn btn-light" onclick='img.areaFocus(this)'>Area</button>
                 </span>
@@ -47,27 +47,11 @@
                     $('.imageDefault').parent().css('max-height', baseImg.height + 6);
                 });
             },
-            zoom: function (t, i) {
-                var canvas = $(t).closest('.imageContent').find('.imageDefault');
-                if (parseFloat(canvas.attr('scale')) === 1 && i === 'out')
-                    return;
-
-                canvas.attr('scale', parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1));
-
-                img.loadImageCanvas(canvas, function (baseImg, ctx) {
-                    ctx.scale(canvas.attr('scale'), canvas.attr('scale'));
-                    ctx.drawImage(baseImg, 0, 0);
-
-                    var removeSize = parseFloat(canvas.attr('scale')) === 1;
-                    canvas.css("width", removeSize ? "" : parseInt(baseImg.width * parseFloat(canvas.attr('scale'))));
-                    canvas.css("height", removeSize ? "" : parseInt(baseImg.height * parseFloat(canvas.attr('scale'))));
-                });
-            },
-            rotate: function (t, direction) {
+            zoomRotate: function (t, direction, i) {
                 var canvas = $(t).closest('.imageContent').find('.imageDefault');
 
-                canvas.attr('scale', '1.0');
-                img.zoom(t, 'out');
+                if (i === "in" || (i === 'out' && parseFloat(canvas.attr('scale')) > 1))
+                    canvas.attr('scale', parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1));
 
                 if (direction === 'right')
                     canvas.attr('rotate', parseInt(canvas.attr('rotate')) + 90);
@@ -80,6 +64,10 @@
                 var imgVertical = canvas.attr('rotate').includes('90') || canvas.attr('rotate').includes('270');
 
                 img.loadImageCanvas(canvas, function (baseImg, ctx) {
+                    //zoom
+                    ctx.scale(canvas.attr('scale'), canvas.attr('scale'));
+
+                    //rotate
                     if (canvas.attr('rotate') === '90' || canvas.attr('rotate') === '-270')
                         ctx.translate(baseImg.height, 0);
                     else if (canvas.attr('rotate') === '-90' || canvas.attr('rotate') === '270')
@@ -90,8 +78,9 @@
                     ctx.rotate(parseInt(canvas.attr('rotate')) * Math.PI / 180);
                     ctx.drawImage(baseImg, 0, 0);
 
-                    canvas.css("width", !imgVertical ? "" : baseImg.height);
-                    canvas.css("height", !imgVertical ? "" : baseImg.width);
+                    var removeSize = parseFloat(canvas.attr('scale')) === 1;
+                    canvas.css("width", !imgVertical && removeSize ? "" : parseInt(baseImg.width * parseFloat(canvas.attr('scale'))));
+                    canvas.css("height", !imgVertical && removeSize ? "" : parseInt(baseImg.height * parseFloat(canvas.attr('scale'))));
                 }, imgVertical);
             },
             autoFocus: function (t) {
