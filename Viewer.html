@@ -100,7 +100,7 @@
             zoomRotate: function (t, direction, i) {
                 var canvas = $(t).closest('.imageContent').find('.imageDefault');
 
-                if (i === "in" || (i === 'out' && parseFloat(canvas.attr('scale')) > 1))
+                if (i === "in" || (i === 'out' && parseFloat(canvas.attr('scale')) > 0.1))
                     canvas.attr('scale', parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1));
 
                 if (direction === 'right')
