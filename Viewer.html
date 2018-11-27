@@ -38,7 +38,7 @@
 
     <script>
         var img = {
-            imageDefaultSrc: '',
+            imageDefaultSrc: 'TESTE2.jpg',
             init: function (el) {
                 var isImg = img.validateFileType();
 
@@ -51,11 +51,27 @@
 
                     $(el).attr('scale', '1.0').attr('rotate', '0').attr('focusEnable', 'false');
                     $('#divImgClone').css('margin-left', $('.imageDefault').parent().css('width').replace('px', '') / 2 - ($('#divImgClone').css('width').replace('px', '') / 2));
+                    var canvas = $('.imageDefault');
 
                     img.loadImageCanvas(el, function (baseImg, ctx) {
                         ctx.drawImage(baseImg, 0, 0);
-                        $('.imageDefault').parent().css('max-height', window.innerHeight - 37);
-                        img.zoomRotate($('#divImgClone'), '', 'out');
+                        canvas.parent().css('max-height', window.innerHeight - 37);
+                        
+                        var maxHeightParent = canvas.parent().css('max-height').replace('px', '') - 6;
+                        var maxWidthParent = canvas.parent().css('width').replace('px', '');
+                        var newHeight = baseImg.height;
+                        var newWidth = baseImg.width;
+                        var zoom = 1;
+                        do {
+                            zoom -= 0.01;
+                            newHeight = baseImg.height * zoom;
+                            newWidth = baseImg.width * zoom;
+                            canvas.attr('scale', Math.round((parseFloat(canvas.attr('scale')) + -0.01) * Math.pow(10, 2)) / Math.pow(10, 2));
+
+                        } while (canvas.attr('scale') > 0.1 && (newWidth >= maxWidthParent || newHeight >= maxHeightParent));
+
+                        img.zoomRotate($('#divImgClone'), '', '');
+                        
                     });
                 }
                 else {
@@ -101,7 +117,7 @@
                 var canvas = $(t).closest('.imageContent').find('.imageDefault');
 
                 if (i === "in" || (i === 'out' && parseFloat(canvas.attr('scale')) > 0.1))
-                    canvas.attr('scale', parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1));
+                    canvas.attr('scale', Math.round((parseFloat(canvas.attr('scale')) + (i === 'in' ? 0.1 : -0.1)) * Math.pow(10, 2)) / Math.pow(10, 2));
 
                 if (direction === 'right')
                     canvas.attr('rotate', parseInt(canvas.attr('rotate')) + 90);
