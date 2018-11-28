@@ -232,10 +232,10 @@
 
                     $('.canvasSelectDefault').css('margin-top', canvas.height * -1);
                     //$('.canvasSelectDefault').css('margin-left', ((parseFloat(obj.parent().css('width').replace('px', '')) / 2) + ($('.canvasSelectDefault').width() / 2) - (imgRotate ? 11.5 : 3)) * -1);
-
-                    var scrollParent = getScrollParent();
-                    rect.startX = e.pageX + scrollParent.x - this.offsetLeft + ((newCanvas.width - canvas.width) / 2);
-                    rect.startY = e.pageY + scrollParent.y - this.offsetTop;
+                    
+                    var detailsParent = getScrollAndOffSetParent();
+                    rect.startX = e.pageX + detailsParent.x - detailsParent.offsetLeft - this.offsetLeft + ((newCanvas.width - canvas.width) / 2);
+                    rect.startY = e.pageY + detailsParent.y - detailsParent.offsetTop - this.offsetTop;
                     drag = true;
 
                     $('.canvasSelectDefault').on('mouseup', function () {
@@ -254,9 +254,9 @@
                     $('.canvasSelectDefault').on('mousemove', function (e) {
                         if (drag) {
                             newContext.clearRect(0, 0, newCanvas.width, newCanvas.height);
-                            var scrollParent = getScrollParent();
-                            rect.w = (e.pageX + scrollParent.x - this.offsetLeft) - rect.startX;
-                            rect.h = (e.pageY + scrollParent.y - this.offsetTop) - rect.startY;
+                            var detailsParent = getScrollAndOffSetParent();
+                            rect.w = (e.pageX + detailsParent.x - detailsParent.offsetLeft - this.offsetLeft) - rect.startX;
+                            rect.h = (e.pageY + detailsParent.y - detailsParent.offsetTop - this.offsetTop) - rect.startY;
                             //Validar se o tamanho do selecionado está maior que o permitido
                             rect.w = rect.w > (180 * 0.7) ? 180 * 0.7 : rect.w;
                             rect.h = rect.h > (80 * 0.7) ? 80 * 0.7 : rect.h;
@@ -273,7 +273,7 @@
                     newContext.fillRect(rect.startX, rect.startY, rect.w, rect.h);
                 }
 
-                function getScrollParent() {
+                function getScrollAndOffSetParent() {
                     var parent = $('.imageDefault').parent();
                     var yParent = parent[0].scrollTop;
                     var xParent = parent[0].scrollLeft;
@@ -288,7 +288,11 @@
                         }
 
                     } while (parent[0] != undefined && parent[0].scrollTop != undefined);
-                    return { x: xParent, y: yParent };
+
+                    var boxFrmExecute = $('#BoxFrmExecute')[0];
+                    var offsetTop = boxFrmExecute != undefined ? boxFrmExecute.offsetTop : 0;
+                    var offsetLeft = boxFrmExecute != undefined ? boxFrmExecute.offsetLeft : 0;
+                    return { x: xParent, y: yParent, offsetTop: offsetTop, offsetLeft: offsetLeft };
                 }
 
                 $('body').click(function () {
